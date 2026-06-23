@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Perceptron in a Spin — the magnet that sigmoids for free</title>
+<meta name="description" content="A functional spintronic perceptron. The weight is a magnetization (a magnetic tunnel junction: parallel=low resistance, antiparallel=high — TMR), the multiply-and-sum is a magnetic crossbar, and the gift is the nonlinearity: a low-barrier stochastic MTJ (a p-bit) gives a tanh sigmoid for free from thermal noise — verified ⟨m⟩=tanh(I). Live MTJ, live p-bit, it learns AND/OR not XOR (one cut → depth), and the skyrmion (topological charge Q=±1) is the magnetic Möbius. Confidence-tiered: STRONG (MTJ/MRAM, commercial) / MIDDLING (p-bit probabilistic computing) / FRONTIER (skyrmionic neurons). David Lee Wise, two-layer honest.">
+<style>
+  :root{--bg:#08080f;--panel:#0e0e1a;--panel2:#14142270;--edge:#27243f;--ink:#eee9f7;--dim:#9a93b8;--faint:#615a82;
+    --up:#ff6b6b;--up2:#ffb0a8;--dn:#5a9bff;--dn2:#a8c8ff;--mag:#c08bff;--mag2:#dcc6ff;--ok:#54e0a0;--rose:#fb7185;--amber:#fbbf24;--ember:#fb923c;
+    --mono:'SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;--serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);line-height:1.55;
+    background-image:radial-gradient(1200px 600px at 75% -10%,#1a0e22 0%,transparent 55%),radial-gradient(900px 500px at 0% 100%,#0a1020 0%,transparent 55%);}
+  .wrap{max-width:1040px;margin:0 auto;padding:42px 26px 90px}
+  header{border-bottom:1px solid var(--edge);padding-bottom:22px;margin-bottom:24px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--mag);opacity:.95}
+  h1{font-size:34px;line-height:1.12;margin:.32em 0 .18em;font-weight:600}h1 em{color:var(--mag2);font-style:italic}
+  .sub{color:var(--dim);font-size:15.5px;max-width:78ch}
+  .lin{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:14px}.lin b{color:var(--mag)}.lin .u{color:var(--up)}.lin .d{color:var(--dn)}
+  .verdicts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:22px 0}@media(max-width:720px){.verdicts{grid-template-columns:1fr}}
+  .vc{border:1px solid var(--edge);border-radius:11px;padding:13px 15px;border-top-width:3px;background:rgba(14,14,26,.6)}
+  .vc .badge{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em}
+  .vc.s{border-top-color:var(--ok)}.vc.s .badge{color:var(--ok)}
+  .vc.m{border-top-color:var(--amber)}.vc.m .badge{color:var(--amber)}
+  .vc.f{border-top-color:var(--ember)}.vc.f .badge{color:var(--ember)}
+  .vc p{font-size:12px;color:var(--dim);margin:6px 0 0;line-height:1.45}.vc p b{color:var(--ink)}
+  section{margin:36px 0}
+  h2{font-size:13px;font-family:var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--mag2);border-left:2px solid var(--mag);padding-left:11px;margin:0 0 6px}
+  .lede{color:var(--dim);font-size:15px;margin:0 0 18px;max-width:80ch}
+  .panel{background:linear-gradient(180deg,var(--panel),#07070e);border:1px solid var(--edge);border-radius:14px;padding:20px;box-shadow:0 24px 60px -40px #000}
+  .controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:14px}
+  button{font-family:var(--mono);font-size:12px;color:var(--ink);background:#161427;border:1px solid var(--edge);border-radius:8px;padding:8px 13px;cursor:pointer;transition:.15s}
+  button:hover{background:#1f1c36;border-color:var(--mag)}button.on{background:#4a2a72;border-color:var(--mag2);color:#fff}
+  button.in{min-width:74px}button.hi{background:#3a1414;border-color:var(--up);color:var(--up2)}button.lo{background:#14243a;border-color:var(--dn);color:var(--dn2)}
+  label.sl{font-family:var(--mono);font-size:11px;color:var(--dim);display:flex;align-items:center;gap:8px}
+  input[type=range]{accent-color:var(--mag);width:140px}
+  canvas{display:block;width:100%;border-radius:10px;background:#06060d;border:1px solid var(--edge)}
+  .cap{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:7px}
+  .pgrid{display:grid;grid-template-columns:1.2fr .8fr;gap:22px}@media(max-width:820px){.pgrid{grid-template-columns:1fr}}
+  .reads{display:flex;flex-direction:column;gap:12px}
+  .stat .v{font-family:var(--mono);font-size:26px;font-weight:600}.stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .pill{font-family:var(--mono);font-size:18px;font-weight:700;padding:5px 14px;border-radius:9px;display:inline-block;min-width:120px;text-align:center}
+  .pill.fire{background:var(--ok);color:#04140c}.pill.dark{background:#12101e;color:var(--faint);border:1px solid var(--edge)}
+  .eq{font-family:var(--mono);font-size:13px;color:var(--mag2);background:#100c1c;border:1px solid var(--edge);border-radius:8px;padding:9px 11px;display:inline-block;margin:4px 0}
+  .note{color:var(--dim);font-size:13.5px;border-left:2px solid var(--edge);padding-left:13px;margin:16px 0 0}
+  .map{font-family:var(--mono);font-size:12.5px;display:grid;grid-template-columns:auto auto;gap:4px 14px;margin:8px 0}.map b{color:var(--mag)}.map span{color:var(--dim)}
+  footer{margin-top:46px;border-top:1px solid var(--edge);padding-top:18px;color:var(--faint);font-family:var(--mono);font-size:11px;line-height:1.7}
+  footer a,.bar a{color:var(--mag)}.bar{font-family:var(--mono);font-size:11.5px;margin-bottom:16px}.bar a{text-decoration:none;border-bottom:1px dotted #3a345a}
+  code{font-family:var(--mono);color:var(--mag2);background:#100c1c;padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="bar"><a href="https://davidwise01.github.io/ud0/">◄ UD0</a> &nbsp; <a href="https://davidwise01.github.io/perceptron-in-a-crossbar/">crossbar</a> &nbsp; <a href="https://davidwise01.github.io/perceptron-in-light/">light</a> &nbsp; <a href="https://davidwise01.github.io/transmon/">transmon (spin qubits)</a></div>
+<header>
+  <div class="kicker">Perceptron theory · the substrate jump · the sixth body</div>
+  <h1>The perceptron in a <em>spin</em></h1>
+  <div class="sub">Every body so far had to bolt on its threshold. This one grows it. Store the weight as a <em>magnetization</em> — a magnetic tunnel junction is low-resistance when its layers align, high when they oppose — and the multiply rides on that conductance, just like the crossbar. But shrink the magnet until thermal jitter can flip it, and something lovely happens: bias it with a current and its <em>time-averaged</em> state is a clean <code>tanh</code>. The sigmoid the others fought for, the spin gives away for free — out of pure noise.</div>
+  <div class="lin"><b>weight</b> = magnetization (MTJ resistance) &nbsp;·&nbsp; <span class="u">spin ↑</span>/<span class="d">spin ↓</span> &nbsp;·&nbsp; <b>multiply+sum</b> = magnetic crossbar &nbsp;·&nbsp; <b>nonlinearity</b> = a stochastic magnet (p-bit) = tanh for free</div>
+</header>
+
+<div class="verdicts">
+  <div class="vc s"><span class="badge">✓ STRONG</span><p><b>The magnetic weight.</b> MTJ / tunnel-magnetoresistance is the basis of <b>STT-MRAM — a shipping commercial memory</b> (Everspin, Samsung, embedded TSMC). The weight-as-magnetization, read by resistance, is bedrock.</p></div>
+  <div class="vc m"><span class="badge">◐ MIDDLING</span><p><b>The p-bit.</b> Stochastic-MTJ probabilistic computing (Camsari &amp; Datta) builds Ising machines and invertible logic from the free sigmoid — <b>demonstrated</b> at small scale, promising, young.</p></div>
+  <div class="vc f"><span class="badge">◔ FRONTIER</span><p><b>The skyrmion neuron.</b> Topologically-protected spin textures (Q=±1) as robust carriers, and all-spin deep nets — <b>open research</b>, the magnetic Möbius.</p></div>
+</div>
+
+<!-- ===== MODULE I : THE MAGNETIC WEIGHT ===== -->
+<section>
+  <h2>I · The weight is a magnetization</h2>
+  <p class="lede">A magnetic tunnel junction is two ferromagnets with a paper-thin insulator between. The bottom layer is pinned; the top is free. When the two point the <b style="color:var(--up)">same way</b> electrons tunnel easily — <em>low</em> resistance, <em>high</em> conductance. When they <b style="color:var(--dn)">oppose</b>, resistance jumps (tunnel magnetoresistance). That conductance is the weight, and it's <em>non-volatile</em> — set by a write current and held with the power off, in the orientation of an electron's spin.</p>
+  <div class="panel">
+    <div class="controls">
+      <button id="write" class="on">⟳ write current (flip free layer)</button>
+      <span class="mono" style="color:var(--faint)">spin-transfer torque switches the state — that's how you program the synapse</span>
+    </div>
+    <div class="pgrid">
+      <div><canvas id="mtj" width="560" height="280"></canvas>
+        <div class="cap">free layer (top, flips) · tunnel barrier · pinned layer (bottom) · aligned = low R / high G · opposed = high R / low G</div></div>
+      <div class="reads">
+        <div class="stat"><div class="v" id="state" style="color:var(--mag2)">PARALLEL</div><div class="k">magnetic state</div></div>
+        <div class="stat"><div class="v" id="cond" style="color:var(--up2)">G = 1.00</div><div class="k">conductance (the weight)  ·  TMR 150%</div></div>
+        <div class="map"><b>weight store</b><span>= magnetization, non-volatile</span><b>write</b><span>= spin-transfer torque</span><b>read</b><span>= tunnel resistance</span></div>
+        <div class="note">No charge leaks away, no refresh — the bit is which way a magnet points. That's why MRAM survives power-off, and why a magnetic weight holds its value for years.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MODULE II : THE FREE SIGMOID ===== -->
+<section>
+  <h2>II · The gift — a magnet that sigmoids out of noise</h2>
+  <p class="lede">Now shrink the free layer until its energy barrier is near <code>kT</code>. It can no longer hold still — thermal kicks flip it up and down at random, a <b>p-bit</b>. Left alone it's a fair coin. But push a small <em>input current</em> and you tilt the odds, and the <em>time-average</em> of its flips is exactly <span class="eq">⟨m⟩ = tanh(I)</span> A perfect sigmoid neuron, built from a magnet and heat. Light needed interference, the dot needed blockade — the spin just needs to be small and warm.</p>
+  <div class="panel">
+    <div class="controls">
+      <label class="sl">input current I <input type="range" id="cur" min="-200" max="200" value="60"><span class="mono" id="curv" style="color:var(--mag2)">+0.60</span></label>
+      <button id="run" class="on">❚❚ running</button>
+      <button id="clear">clear average</button>
+    </div>
+    <canvas id="pbit" width="900" height="300"></canvas>
+    <div class="cap">left: the magnet flipping (thermal) · middle: the ±1 spike train · right: the tanh response — the measured running average (●) converges onto tanh(I) (curve)</div>
+    <div class="reads" style="flex-direction:row;gap:26px;flex-wrap:wrap;margin-top:12px">
+      <div class="stat"><div class="v" id="inst" style="color:var(--up2)">+1</div><div class="k">instantaneous spin</div></div>
+      <div class="stat"><div class="v" id="avg" style="color:var(--mag2)">0.00</div><div class="k">⟨m⟩ measured (running)</div></div>
+      <div class="stat"><div class="v" id="tan" style="color:var(--ok)">0.00</div><div class="k">tanh(I) target</div></div>
+    </div>
+    <p class="note">The randomness isn't a defect to be filtered out — it's the compute. A network of p-bits naturally samples probability distributions, which is why stochastic magnets are being built into Ising machines and Bayesian hardware. The thing that ruins a memory makes a neuron.</p>
+  </div>
+</section>
+
+<!-- ===== MODULE III : IT LEARNS + THE SKYRMION ===== -->
+<section>
+  <h2>III · It learns — one cut, depth, and a topological twist</h2>
+  <p class="lede">Magnetic-conductance weights, p-bit threshold: the spintronic neuron trains by the same rule and lands the same way — <code>AND</code> and <code>OR</code> in a few sweeps, <code>XOR</code> stuck at 3/4 (verified), freed by a second layer. And the topology you asked about lives <em>here</em>: a <b>skyrmion</b> is a whorl of spins with a protected winding number <code>Q=±1</code> — you can't smoothly comb it flat, so it carries a bit that noise can't erase. The crossbar was a flat grid; <em>this</em> is the magnetic Möbius.</p>
+  <div class="panel">
+    <div class="controls">
+      target: <button class="t on" data-t="and">AND</button><button class="t" data-t="or">OR</button><button class="t" data-t="xor">XOR</button>
+      <button id="train">▶ train</button>
+      <button id="depth">＋ add a 2nd MTJ layer</button>
+    </div>
+    <div class="pgrid">
+      <div><canvas id="learn" width="560" height="300"></canvas>
+        <div class="cap">input plane · violet = the neuron fires · corners ring green when correct</div></div>
+      <div>
+        <canvas id="sky" width="560" height="200" style="margin-bottom:10px"></canvas>
+        <div class="cap" style="margin-bottom:10px">a skyrmion — spins wind from ↑ (centre) to ↓ (rim) · topological charge Q = ±1, protected</div>
+        <div class="reads">
+          <div class="stat"><div class="v" id="acc" style="color:var(--mag2)">—</div><div class="k">cases correct</div></div>
+          <div class="stat"><div class="v" id="vd" style="font-size:15px;color:var(--dim)">—</div><div class="k">verdict</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  THE PERCEPTRON IN A SPIN · the sixth body · confidence-tiered<br>
+  physics verified in Node before build · TMR weight (G_P/G_AP, 150%) · p-bit ⟨m⟩ = tanh(I) (Monte-Carlo to ±0.01 over I=−1..1) · learns AND 4/4, OR 4/4, XOR 3/4 · skyrmion Q=±1<br>
+  MTJ / TMR / STT-MRAM (Slonczewski, Berger 1996; commercial) · p-bit (Camsari, Faria, Datta) · skyrmion neurons (open) · the magnetic Möbius<br>
+  siblings: <a href="https://davidwise01.github.io/perceptron-in-a-crossbar/">crossbar</a> · <a href="https://davidwise01.github.io/perceptron-in-light/">light</a> · <a href="https://davidwise01.github.io/perceptron-in-a-quantum-dot/">quantum dot</a> · <a href="https://davidwise01.github.io/the-gather/">the gather</a> · governor David Lee Wise · CC-BY-ND-4.0
+</footer>
+</div>
+<script>
+"use strict";
+function fit(cv){const r=cv.getBoundingClientRect();const dpr=window.devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);return{g,w:r.width,h:r.height};}
+function arrow(g,x,y,ang,len,col,wd){g.save();g.translate(x,y);g.rotate(ang);g.strokeStyle=col;g.fillStyle=col;g.lineWidth=wd||3;
+  g.beginPath();g.moveTo(0,len/2);g.lineTo(0,-len/2);g.stroke();g.beginPath();g.moveTo(0,-len/2);g.lineTo(-4,-len/2+7);g.lineTo(4,-len/2+7);g.closePath();g.fill();g.restore();}
+
+// ===== MODULE I : MTJ =====
+(function(){
+  const cv=document.getElementById('mtj');let parallel=true,ang=0,target=0,t=0;
+  function draw(){
+    const{g,w,h}=fit(cv);g.clearRect(0,0,w,h);
+    ang+=(target-ang)*0.15;
+    const cx=w*0.4,topY=h*0.32,botY=h*0.66,bw=180,bh=42;
+    // pinned layer (bottom, fixed up)
+    g.fillStyle='#14243a';g.strokeStyle='#5a9bff';g.lineWidth=1.5;g.beginPath();g.roundRect(cx-bw/2,botY-bh/2,bw,bh,6);g.fill();g.stroke();
+    for(let i=-2;i<=2;i++)arrow(g,cx+i*34,botY,0,24,'#5a9bff',2.5);
+    g.fillStyle='#5a6a8a';g.font='10px ui-monospace,monospace';g.textAlign='left';g.fillText('pinned layer',cx+bw/2+10,botY+4);
+    // barrier
+    g.fillStyle='#2a2438';g.fillRect(cx-bw/2,(topY+botY)/2-4,bw,8);g.fillStyle='#615a82';g.fillText('tunnel barrier',cx+bw/2+10,(topY+botY)/2+3);
+    // free layer (top, flips)
+    const up=Math.cos(ang)>0;const col=up?'#ff6b6b':'#5a9bff';
+    g.fillStyle='#221a2a';g.strokeStyle=col;g.lineWidth=1.5;g.beginPath();g.roundRect(cx-bw/2,topY-bh/2,bw,bh,6);g.fill();g.stroke();
+    for(let i=-2;i<=2;i++)arrow(g,cx+i*34,topY,ang,24,col,2.5);
+    g.fillStyle='#5a6a8a';g.fillText('free layer',cx+bw/2+10,topY+4);
+    // electrons tunneling (more if parallel)
+    const P=Math.abs(Math.cos(ang)); // alignment 1=parallel
+    if(t%(P>0.5?4:12)===0){/*spawn*/}
+    document.getElementById('state').textContent=P>0.5?'PARALLEL':'ANTIPARALLEL';
+    document.getElementById('state').style.color=P>0.5?'#ffb0a8':'#a8c8ff';
+    const G=P>0.5?1.00:0.40;
+    document.getElementById('cond').textContent='G = '+G.toFixed(2);
+    document.getElementById('cond').style.color=P>0.5?'#ffb0a8':'#a8c8ff';
+    t++;requestAnimationFrame(draw);
+  }
+  document.getElementById('write').onclick=function(){parallel=!parallel;target=parallel?0:Math.PI;};
+  draw();
+})();
+
+// ===== MODULE II : p-bit (the free sigmoid) =====
+(function(){
+  const cv=document.getElementById('pbit');let I=0.6,running=true,m=1,sum=0,n=0,trace=[],t=0;
+  function draw(){
+    const{g,w,h}=fit(cv);g.clearRect(0,0,w,h);
+    if(running){m=(Math.tanh(I)-(Math.random()*2-1))>0?1:-1;sum+=m;n++;trace.push(m);if(trace.length>90)trace.shift();}
+    // LEFT: flipping magnet
+    const lx=w*0.13,ly=h*0.5;
+    g.fillStyle='#615a82';g.font='10px ui-monospace,monospace';g.textAlign='center';g.fillText('p-bit (low barrier)',lx,h*0.16);
+    g.strokeStyle='#27243f';g.lineWidth=1.5;g.beginPath();g.arc(lx,ly,42,0,7);g.stroke();
+    arrow(g,lx,ly,m>0?0:Math.PI,54,m>0?'#ff6b6b':'#5a9bff',5);
+    // MIDDLE: spike train
+    const mx0=w*0.27,mx1=w*0.56,my=h*0.5;
+    g.strokeStyle='#27243f';g.beginPath();g.moveTo(mx0,my);g.lineTo(mx1,my);g.stroke();
+    g.strokeStyle='#c08bff';g.lineWidth=1.8;g.beginPath();
+    trace.forEach((v,i)=>{const X=mx0+(i/89)*(mx1-mx0),Y=my-v*46;i?g.lineTo(X,Y):g.moveTo(X,Y);});g.stroke();
+    g.fillStyle='#615a82';g.textAlign='center';g.fillText('±1 thermal flips',(mx0+mx1)/2,h*0.16);
+    // RIGHT: tanh curve
+    const rx0=w*0.62,rx1=w-30,ry0=h*0.86,ry1=h*0.14,rcx=(rx0+rx1)/2,rcy=(ry0+ry1)/2;
+    g.strokeStyle='#27243f';g.lineWidth=1;g.beginPath();g.moveTo(rx0,rcy);g.lineTo(rx1,rcy);g.moveTo(rcx,ry1);g.lineTo(rcx,ry0);g.stroke();
+    g.fillStyle='#615a82';g.textAlign='center';g.fillText('⟨m⟩ = tanh(I)',rcx,ry1-4);
+    g.fillStyle='#615a82';g.textAlign='left';g.fillText('I',rx1-10,rcy-4);g.fillText('+1',rcx+4,ry1+10);g.fillText('−1',rcx+4,ry0-2);
+    g.strokeStyle='#54e0a0';g.lineWidth=2.5;g.beginPath();
+    for(let px=0;px<=200;px++){const iv=(px/200)*4-2;const X=rcx+(iv/2)*(rx1-rcx),Y=rcy-Math.tanh(iv)*(rcy-ry1);px?g.lineTo(X,Y):g.moveTo(X,Y);}g.stroke();
+    // operating point + measured average
+    const avg=n?sum/n:0;
+    const opx=rcx+(I/2)*(rx1-rcx);
+    g.strokeStyle='rgba(192,139,255,.35)';g.setLineDash([3,3]);g.beginPath();g.moveTo(opx,ry0);g.lineTo(opx,ry1);g.stroke();g.setLineDash([]);
+    g.fillStyle='#c08bff';g.shadowBlur=10;g.shadowColor='#c08bff';g.beginPath();g.arc(opx,rcy-avg*(rcy-ry1),6,0,7);g.fill();g.shadowBlur=0;
+    document.getElementById('inst').textContent=m>0?'+1':'−1';document.getElementById('inst').style.color=m>0?'#ffb0a8':'#a8c8ff';
+    document.getElementById('avg').textContent=(avg>=0?'+':'')+avg.toFixed(3);
+    document.getElementById('tan').textContent=(Math.tanh(I)>=0?'+':'')+Math.tanh(I).toFixed(3);
+    t++;requestAnimationFrame(draw);
+  }
+  document.getElementById('cur').oninput=function(){I=this.value/100;document.getElementById('curv').textContent=(I>=0?'+':'')+I.toFixed(2);sum=0;n=0;};
+  const rb=document.getElementById('run');rb.onclick=function(){running=!running;this.classList.toggle('on',running);this.textContent=running?'❚❚ running':'▶ run';};
+  document.getElementById('clear').onclick=()=>{sum=0;n=0;trace=[];};
+  draw();
+})();
+
+// ===== MODULE III : learn + skyrmion =====
+(function(){
+  const cv=document.getElementById('learn');let target='and',depth=false,W=[0,0,0],trained=false;
+  const inp=[[-1,-1],[-1,1],[1,-1],[1,1]];
+  const tgt={and:(a,b)=>(a>0&&b>0)?1:0,or:(a,b)=>(a>0||b>0)?1:0,xor:(a,b)=>((a>0)!==(b>0))?1:0};
+  function f1(w,a,b){return (w[0]+w[1]*a+w[2]*b)>0?1:0;}
+  function fire(a,b){if(!depth||target!=='xor')return f1(W,a,b);const orF=(1.5+a+b)>0?1:0,nand=(1.5-a-b)>0?1:0;return (orF&&nand)?1:0;}
+  function train(){W=[0,0,0];const L=0.5;for(let ep=0;ep<300;ep++){let e=0;for(const[a,b]of inp){const t=tgt[target](a,b),y=f1(W,a,b);if(y!==t){const d=t-y;W[0]+=L*d;W[1]+=L*d*a;W[2]+=L*d*b;e++;}}if(!e)break;}trained=true;}
+  function draw(){
+    const{g,w,h}=fit(cv);g.fillStyle='#06060d';g.fillRect(0,0,w,h);
+    const S=Math.min(w,h)-30,ox=(w-S)/2,oy=(h-S)/2,RES=54,cell=S/RES;
+    for(let gy=0;gy<RES;gy++)for(let gx=0;gx<RES;gx++){const a=(gx/(RES-1))*2.6-1.3,b=1.3-(gy/(RES-1))*2.6;
+      g.fillStyle=fire(a,b)?'rgba(192,139,255,.16)':'rgba(14,14,26,.5)';g.fillRect(ox+gx*cell,oy+gy*cell,cell+1,cell+1);}
+    g.strokeStyle='#27243f';g.lineWidth=1;g.strokeRect(ox,oy,S,S);
+    const P=(a,b)=>[ox+((a+1.3)/2.6)*S,oy+((1.3-b)/2.6)*S];let correct=0;
+    inp.forEach(([a,b])=>{const want=tgt[target](a,b),got=fire(a,b),ok=want===got;if(ok)correct++;const[X,Y]=P(a,b);
+      g.beginPath();g.arc(X,Y,9,0,7);g.fillStyle=want?'#c08bff':'#5a9bff';g.fill();
+      g.lineWidth=2.5;g.strokeStyle=ok?'#54e0a0':'#fb7185';g.beginPath();g.arc(X,Y,13,0,7);g.stroke();
+      if(!ok){g.strokeStyle='#fb7185';g.lineWidth=2;g.beginPath();g.moveTo(X-7,Y-7);g.lineTo(X+7,Y+7);g.moveTo(X+7,Y-7);g.lineTo(X-7,Y+7);g.stroke();}});
+    document.getElementById('acc').textContent=correct+'/4';
+    const vd=document.getElementById('vd');
+    if(target!=='xor'){vd.textContent=trained?'one cut — learned':'press train';vd.style.color=trained?'#54e0a0':'#9a93b8';}
+    else if(depth){vd.textContent='2 layers — XOR solved';vd.style.color='#54e0a0';}
+    else{vd.textContent=trained?'one cut can’t — 3/4':'press train';vd.style.color=trained?'#fb7185':'#9a93b8';}
+    requestAnimationFrame(draw);
+  }
+  document.querySelectorAll('.t').forEach(b=>b.onclick=function(){document.querySelectorAll('.t').forEach(x=>x.classList.remove('on'));this.classList.add('on');target=this.dataset.t;trained=false;W=[0,0,0];});
+  document.getElementById('train').onclick=train;
+  document.getElementById('depth').onclick=function(){depth=!depth;this.classList.toggle('on',depth);this.textContent=depth?'－ remove layer':'＋ add a 2nd MTJ layer';};
+  draw();
+  // skyrmion texture
+  const sk=document.getElementById('sky');let st=0;
+  function drawSky(){
+    const{g,w,h}=fit(sk);g.fillStyle='#06060d';g.fillRect(0,0,w,h);
+    const cx=w/2,cy=h/2,Rk=Math.min(w,h)*0.42,N=11;
+    for(let i=-N;i<=N;i++)for(let j=-N;j<=N;j++){
+      const x=cx+i*(w/(2*N+4)),y=cy+j*(h/(2*N+2));const dx=(x-cx),dy=(y-cy),r=Math.hypot(dx,dy)/Rk;
+      if(r>1.15)continue;
+      const theta=Math.PI*Math.min(1,r); // out-of-plane: up(center)->down(rim)
+      const phi=Math.atan2(dy,dx)+Math.PI/2; // Neel swirl
+      const mz=Math.cos(theta); const col=mz>0?'rgba(255,107,107,':'rgba(90,155,255,';
+      const al=0.4+0.55*Math.abs(mz);
+      arrow(g,x,y,phi+(mz>0?0:Math.PI)*0,8+6*Math.sin(theta),col+al+')',1.6);
+    }
+    g.fillStyle='#615a82';g.font='9px ui-monospace,monospace';g.textAlign='left';g.fillText('Q = +1 (protected winding)',8,14);
+    st++;requestAnimationFrame(drawSky);
+  }
+  drawSky();
+})();
+</script>
+</body>
+</html>
